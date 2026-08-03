@@ -1,0 +1,43 @@
+name: h2au CI Check
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: "CI Build Check"
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install Build Tools, OpenCV & I2C Libs
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libopencv-dev libi2c-dev i2c-tools
+
+    - name: Cache LibTorch
+      id: cache-libtorch
+      uses: actions/cache@v4
+      with:
+        path: /tmp/libtorch
+        key: ${{ runner.os }}-libtorch-2.2.0
+        save-always: true 
+
+    - name: Download LibTorch (if not cached)
+      if: steps.cache-libtorch.outputs.cache-hit != 'true'
+      run: |
+        wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.2.0%2Bcpu.zip -O libtorch.zip
+        unzip -q libtorch.zip -d /tmp/
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -S . \
+          -DCMAKE_PREFIX_PATH="/tmp/libtorch;/usr/lib/x86_64-linux-gnu/cmake/opencv4"
+
+    - name: Build Project
+      run: cmake --build build --config Release
