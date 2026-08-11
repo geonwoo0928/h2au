@@ -8,15 +8,20 @@ if(DEFINED ENV{LIBTORCH_PATH})
     list(APPEND CMAKE_PREFIX_PATH $ENV{LIBTORCH_PATH})
 endif()
 
-if(APPLE)
-    list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew" "/usr/local")
-endif()
-
 find_package(OpenCV REQUIRED)
 find_package(Torch REQUIRED)
 
 # main.cpp 외에 다른 .cpp 파일이 있다면 여기에 추가
-add_executable(my_app main.cpp)
+add_executable(my_app
+    main.cpp
+    I2cDevice.cpp
+    PwmController.cpp
+    ServoCalibration.cpp
+    MotorController.cpp
+    GpioOutput.cpp
+    TerminalInput.cpp
+    Camera.cpp
+)
 
 if(MSVC)
     target_compile_options(my_app PRIVATE /EHsc)
