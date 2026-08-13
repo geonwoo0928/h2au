@@ -1,7 +1,9 @@
 #include "GpsController.h"
 #include "SeoilCoordController.h"
+#include "RcCarDataManager.h"
 
-GpsController::GpsController(const char* serialPort) {
+GpsController::GpsController(const char* serialPort, RcCarDataManager& dataManager)
+    : dataManager_(dataManager) {
     uartFilestream_ = open(serialPort, O_RDONLY | O_NOCTTY);
     if(uartFilestream_ < 0) {
         throw std::runtime_error(std::string("Failed to open ") + serialPort);
@@ -46,19 +48,13 @@ void GpsController::runGpsThread(const SeoilCoordController& coordController) {
             continue;
 
         cv::Point2f pixel = coordController.getRcCarPixel(lat, lon);
-        addRcCarPath(RcCarPosition{lat, lon, pixel.x, pixel.y});
+        dataManager_.updateGps(lat, lon, pixel.x, pixel.y);
     }
 
     return;
 }
 
 void GpsController::stopThread() {isThreadRun_ = false;}
-
-std::deque<RcCarPosition> GpsController::getRcCarPath() {
-    std::lock_guard<std::mutex> lock(gpsMutex_);
-    
-    return rcCarPath_;
-}
 
 bool GpsController::getGpsData(double& lat, double& lon) {
     char buffer[256];
@@ -127,13 +123,4 @@ bool GpsController::convertToDegree(const std::string& degreeText, double& degre
     } catch (...) {
         return false;
     }
-}
-
-void GpsController::addRcCarPath(const RcCarPosition& gps) {
-    std::lock_guard<std::mutex> lock(gpsMutex_);
-
-    if(rcCarPath_.size() >= pathMaxSize_)
-        rcCarPath_.pop_front();
-
-    rcCarPath_.push_back(gps);
 }
