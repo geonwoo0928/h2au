@@ -14,6 +14,8 @@
 
 class SeoilCoordController;
 
+class RcCarDataManager;
+
 struct RcCarPosition {
     double lat;
     double lon;
@@ -23,7 +25,7 @@ struct RcCarPosition {
 
 class GpsController {
 public:
-    GpsController(const char* serialPort);
+    GpsController(const char* serialPort, RcCarDataManager& dataManager);
 
     ~GpsController();
 
@@ -42,23 +44,16 @@ private:
     bool getGpsData(double& lat, double& lon);
     
     // 완성된 NMEA 문장($GPGGA)에서 콤마(,) 구분자를 기준으로 위도와 경도 원본 문자열을 추출하는 함수
-    bool parseGpsData(const std::string& nmeaLine, double& lat, double& lon); // gps 데이터에서 위도, 경도만 가져올수있도록 파싱하는 함수
+    bool parseGpsData(const std::string& nmeaLine, double& lat, double& lon);
 
     // NMEA 규격의 도·분(DDMM.MMMM) 형식 문자열을 십진 도(Decimal Degrees) 형식으로 변환하는 함수
-    bool convertToDegree(const std::string& degreeText, double& degrees); // gps 데이터에서 위도, 경도로 변환하는 함수
-
-    // 수신된 최신 RC카 위치(위경도 및 픽셀 좌표)를 궤적 저장소(deque)에 추가하는 함수
-    void addRcCarPath(const RcCarPosition& pos); // rc카 경로에 데이터 추가하는 함수
+    bool convertToDegree(const std::string& degreeText, double& degrees);
 
     int uartFilestream_;
 
     std::string rxBuffer_;
 
-    std::deque<RcCarPosition> rcCarPath_;
-
-    int pathMaxSize_ = 13;
-
-    std::mutex gpsMutex_;
-
     bool isThreadRun_ = true;
+
+    RcCarDataManager& dataManager_;
 };
