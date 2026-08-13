@@ -1,6 +1,7 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include <deque>
 
 #include <opencv2/opencv.hpp>
 
@@ -10,6 +11,9 @@
 #include "PwmController.h"
 #include "ServoController.h"
 #include "TerminalInput.h"
+#include "SeoilCoordController.h"
+#include "GpsController.h"
+#include "RcCarDataManager.h"
 
 int main()
 {
@@ -20,6 +24,12 @@ int main()
         PwmController pwm(i2c);
         ServoController servo(pwm);
         MotorController motor(pwm);
+
+        RcCarDataManager dataManager;
+        SeoilCoordController coordController;
+        GpsController gpsController("/dev/serial0", dataManager);
+
+        std::thread gpsThread(&GpsController::runGpsThread, &gpsController, std::ref(coordController));
 
         // 채널 0: 카메라 Pan
         // 채널 1: 카메라 Tilt
@@ -64,7 +74,8 @@ int main()
             << " 종료 : Q 또는 카메라 창에서 ESC\n"
             << "==========================================\n";
 
-        while (true)
+        bool isRunning = true;
+        while (isRunning)
         {
             bool ok = camera.read(frame);
 
@@ -77,6 +88,10 @@ int main()
             }
 
             cv::imshow("Robot Camera", frame);
+
+            std::deque<RcCarPosition> path = dataManager.getRcCarPath();
+            cv::Mat satImg = coordController.drawPathOnSatelliteImg(path);
+            cv::imshow("Seoil Satellite Img", satImg);
 
             int cvKey = cv::waitKey(1);
 
@@ -184,25 +199,22 @@ int main()
 
             case 'q':
             case 'Q':
-                motor.stop();
-
-                servo.center(0);
-                servo.center(1);
-                servo.center(2);
-
-                cv::destroyAllWindows();
-
-                return 0;
+                isRunning = false;
+                break;
             }
         }
 
         motor.stop();
-
         servo.center(0);
         servo.center(1);
         servo.center(2);
-
         cv::destroyAllWindows();
+
+        gpsController.stopThread();
+        if(gpsThread.joinable())
+            gpsThread.join();
+
+        return 0;
     }
     catch (const std::exception& e)
     {
@@ -213,6 +225,5 @@ int main()
 
         return 1;
     }
-
     return 0;
 }
