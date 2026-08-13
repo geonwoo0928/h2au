@@ -28,9 +28,6 @@ public:
     // GPS 수신 스레드의 안전한 종료를 요청하는 플래그 설정 함수
     void stopThread();
 
-    // 위성 지도에 궤적(선)을 그리기 위해 저장된 RC카의 과거 이동 경로(deque)를 반환하는 함수
-    std::deque<RcCarPosition> getRcCarPath();
-
 private:
 
     // 시리얼 포트로부터 버퍼를 읽어와 개행 문자(\n) 기준 완결된 NMEA($GPGGA) 문장을 추출하는 함수
