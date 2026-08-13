@@ -21,6 +21,8 @@ add_executable(my_app
     GpioOutput.cpp
     TerminalInput.cpp
     Camera.cpp
+    GpsController.cpp
+    SeoilCoordController.cpp
 )
 
 if(MSVC)
