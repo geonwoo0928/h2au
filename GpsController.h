@@ -16,13 +16,6 @@ class SeoilCoordController;
 
 class RcCarDataManager;
 
-struct RcCarPosition {
-    double lat;
-    double lon;
-    float pixelX;
-    float pixelY;
-};
-
 class GpsController {
 public:
     GpsController(const char* serialPort, RcCarDataManager& dataManager);
