@@ -1,12 +1,17 @@
 """
+이 스크립트는 PC에서 모델 검증/테스트용입니다.
+RPi4 실배포에는 사용되지 않으며, 실제 배포용 탐지+좌표변환 로직은
+viewer/VideoThread.h(C++)에 구현되어 있습니다.
+
 학습된 YOLOv8 보행자 탐지 모델(TorchScript)로 웹캠/영상을 추론하는 스크립트.
 
-RPi4 배포를 염두에 두고 torch, cv2, numpy만 있으면 동작함
+의존성은 torch, cv2, numpy뿐이라 학습 환경 없이도 돌릴 수 있음
 (pandas/albumentations 등 학습용 의존성 불필요 — requirements.txt 참고).
 
 letterbox / decode_yolo_output / nms는 viewer/VideoThread.h의 C++ 구현과
 반드시 동일한 수식을 유지해야 함. 한쪽만 고치면 같은 모델인데 결과가
 달라지므로, 수정 시 양쪽을 같이 볼 것.
+(호모그래피 투영/발 위치 계산은 뷰어 전용이라 여기엔 없음 — 탐지까지만 담당)
 
 모델 출력 형식: model.export(format='torchscript', nms=False)의 결과인
 (1, 5, N) = 채널별 [cx, cy, w, h, score].

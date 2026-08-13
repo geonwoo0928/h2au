@@ -46,7 +46,7 @@ archive_yolo/
 runs/
 *.log
 
-# 로컬 정리용 폴더
-02_실험로그/
-03_사전학습가중치/
-04_백업/
+# 로컬 정리용 폴더 (실험 로그/사전학습 가중치/백업)
+02_logs/
+03_pretrained_weights/
+04_backup/

@@ -1,3 +1,4 @@
+#include <atomic>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
@@ -238,5 +239,8 @@ private:
 
     QMutex m_dataMutex;
     std::vector<cv::Point2f> m_latestSatPoints;
-    bool m_stopRequested;
+    // 워커 스레드가 읽고 GUI 스레드(stop())가 쓰므로 atomic이어야 함.
+    // 평범한 bool이면 데이터 레이스이고, 특히 메모리 모델이 약한 ARM(RPi4)에서는
+    // 워커가 변경을 늦게 보거나 못 봐서 종료가 지연될 수 있다.
+    std::atomic<bool> m_stopRequested;
 };
