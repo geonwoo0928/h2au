@@ -23,6 +23,7 @@ add_executable(my_app
     Camera.cpp
     GpsController.cpp
     SeoilCoordController.cpp
+    RcCarDataManager.cpp
 )
 
 if(MSVC)
