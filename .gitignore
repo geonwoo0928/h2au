@@ -39,3 +39,14 @@ cmake-build-release/
 *.exe
 *.a
 *.lib
+
+# 딥러닝 학습 관련 (데이터셋/산출물/로그는 용량이 커서 제외)
+archive/
+archive_yolo/
+runs/
+*.log
+
+# 로컬 정리용 폴더 (실험 로그/사전학습 가중치/백업)
+02_logs/
+03_pretrained_weights/
+04_backup/
