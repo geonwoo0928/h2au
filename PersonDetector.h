@@ -1,19 +1,21 @@
 ﻿#pragma once
 
+#include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
 #include <opencv2/opencv.hpp>
-#include <torch/script.h>
-#include <torch/torch.h>
+#include <onnxruntime_cxx_api.h>
 
 // hi/01_custom_model/train_person_detector.py의 grid 기반 커스텀 모델(11단계 lite 등)
-// 전용. 이전 YOLOv8 기반 PersonDetector는 더 이상 쓰지 않기로 해서 이 클래스로
-// 덮어썼다 - YOLOv8 버전이 필요하면 git 히스토리에서 복구할 것.
+// 전용. RPi4는 PyTorch가 공식 LibTorch(ARM용)를 배포하지 않아 팀원들이 설치에
+// 계속 막혀서, 추론 백엔드를 LibTorch(torch::jit::load)에서 ONNX Runtime C++ API로
+// 교체했다 - ONNX Runtime은 linux-aarch64용 공식 prebuilt 배포가 있다.
+// 전처리(단순 stretch resize)와 디코딩(sigmoid/exp, decode_prediction 수식)은
+// LibTorch 시절과 완전히 동일하다 - torch::Tensor accessor 대신 순수 float*
+// 포인터 인덱싱으로 바뀐 것만 다르다.
 //
-// 전처리: letterbox(정사각 패딩)가 아니라 단순 stretch resize(종횡비 유지 안 함) +
-// raw grid (1,5,H,W) 출력을 sigmoid/exp로 직접 복원.
 // 디코드 수식은 train_person_detector.py::decode_prediction과 반드시 동일하게
 // 유지해야 한다 - 한쪽만 고치면 같은 모델인데 결과가 달라진다.
 namespace detection {
@@ -32,7 +34,7 @@ struct FootPoint {
 
 class PersonDetector {
 public:
-    // modelPath: hi/01_custom_model에서 CPU로 export한 TorchScript(.pt).
+    // modelPath: hi/01_custom_model에서 export한 ONNX(.onnx) 경로.
     // imgWidth/imgHeight: 학습 시 입력 크기와 반드시 일치해야 함(기본 320x240, 11단계 lite 기준).
     // confThreshold/nmsThreshold: 학습 스크립트가 evaluate()에서 쓰던 기본값
     // (conf 0.05~0.25, NMS IoU 0.3) 기준.
@@ -51,7 +53,7 @@ public:
     static std::vector<FootPoint> getFootPoints(const std::vector<DetectionBox>& boxes);
 
     // 여러 스레드가 같은 PersonDetector 인스턴스를 공유해 detect()를 동시에 부를 때
-    // 보호가 필요하면 이 뮤텍스를 쓰면 된다(내부 forward 호출에도 이미 적용돼 있음).
+    // 보호가 필요하면 이 뮤텍스를 쓰면 된다(내부 Run() 호출에도 이미 적용돼 있음).
     // 스레드마다 인스턴스를 따로 두면(권장) 이건 신경 쓸 필요 없음.
     std::mutex& inferenceMutex() { return modelMutex_; }
 
@@ -59,17 +61,21 @@ private:
     static float calculateIou(const DetectionBox& a, const DetectionBox& b);
     static std::vector<DetectionBox> nms(std::vector<DetectionBox> boxes, float iouThreshold);
 
-    // 텐서 1개(단일 스케일)에서 그리드 디코드.
-    // train_person_detector.py::decode_prediction과 완전히 동일한 수식.
+    // raw grid 텐서 1개(5,gridH,gridW)에서 디코드. LibTorch 시절과 완전히 동일한
+    // 수식 - torch::Tensor accessor 대신 순수 float* 포인터 인덱싱만 다르다.
+    // train_person_detector.py::decode_prediction과 반드시 동일하게 유지할 것.
     static std::vector<DetectionBox> decodePrediction(
-        const torch::Tensor& pred, int imgW, int imgH, float confThreshold);
+        const float* pred, int64_t gridH, int64_t gridW, int imgW, int imgH, float confThreshold);
 
-    // FPN(9단계 등)처럼 출력이 레벨별 텐서 tuple/list일 수도 있어 IValue로 받아 분기.
-    // 단일 스케일(11단계)이면 텐서 하나라 첫 분기만 탄다.
-    static std::vector<DetectionBox> decodeOutput(
-        const c10::IValue& output, int imgW, int imgH, float confThreshold);
+    // FPN(9단계 등)처럼 모델 출력이 여러 개일 수도 있어 세션의 모든 출력을 순회하며
+    // 스케일별로 디코드한다. 단일 스케일(11단계)이면 출력이 하나라 루프가 1회만 돈다.
+    std::vector<DetectionBox> decodeOutputs(
+        const std::vector<Ort::Value>& outputs, int imgW, int imgH, float confThreshold);
 
-    torch::jit::script::Module model_;
+    Ort::Env env_;
+    std::unique_ptr<Ort::Session> session_;
+    std::string inputName_;
+    std::vector<std::string> outputNames_;
     bool loaded_ = false;
     int imgWidth_;
     int imgHeight_;
