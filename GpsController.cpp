@@ -52,7 +52,7 @@ GpsController::~GpsController()
         close(uartFilestream_);
 }
 
-void GpsController::runGpsThread(const SeoilCoordController &coordController)
+void GpsController::runGpsThread(const SeoilCoordController &coordController, const std::function<void()> &onGpsUpdated)
 {
     while (isThreadRun_)
     {
