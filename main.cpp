@@ -1,83 +1,7 @@
-﻿#include <iostream>
-
-#ifdef _WIN32
-// ============================================================================
-// [로컬 테스트 전용, 커밋 금지] Windows에서는 하드웨어 제어 코드가 컴파일 자체가
-// 안 되므로(termios.h, linux/i2c-dev.h, linux/gpio.h 없음) 실기기 초기화를 전부
-// 건너뛰고, 영상 파일을 카메라 대신 읽어 PersonDetector::detect()에 넘기는
-// 흐름만 남긴다. 세그폴트 재현/스트레스 테스트가 목적.
-// 실제 배포용 main()은 아래 #else 블록 그대로이며 RPi4(Linux)에서만 빌드된다.
-// ============================================================================
-#include <opencv2/opencv.hpp>
-
-#include "PersonDetector.h"
-
-int main()
-{
-    const std::string videoPath =
-        "C:/Users/a/Desktop/rc-detection-test/detection/test_videos/KakaoTalk_20260815_020416694.mp4";
-    const std::string modelPath = "C:/Users/a/Desktop/h2au/detection/models/person_detector_script_11_lite.pt";
-
-    std::cout << "[Windows 테스트] 모델 로드 중: " << modelPath << "\n";
-    detection::PersonDetector personDetector(modelPath, 320, 240, 0.25f, 0.3f);
-    if (!personDetector.isLoaded())
-    {
-        std::cerr << "모델 로드 실패: " << modelPath << "\n";
-        return 1;
-    }
-    std::cout << "모델 로드 성공.\n";
-
-    cv::VideoCapture cap(videoPath);
-    if (!cap.isOpened())
-    {
-        std::cerr << "영상을 열 수 없습니다: " << videoPath << "\n";
-        return 1;
-    }
-    std::cout << "영상 로드 성공: " << videoPath << "\n\n";
-
-    cv::Mat frame;
-    int frameIdx = 0;
-
-    // 크래시 직전 마지막으로 남는 줄이 원인 프레임을 알려주도록 매 프레임 즉시 flush.
-    while (cap.read(frame))
-    {
-        std::cout << "frame " << frameIdx << " 처리 시작" << std::flush;
-
-        auto boxes = personDetector.detect(frame, /*drawBoxes=*/true);
-
-        std::cout << " -> 완료 (박스 " << boxes.size() << "개)";
-        if (!boxes.empty())
-        {
-            auto feet = detection::PersonDetector::getFootPoints(boxes);
-            for (size_t i = 0; i < feet.size(); ++i)
-            {
-                std::cout << "  foot[" << i << "]=(" << feet[i].x << ", " << feet[i].y
-                    << ") conf=" << feet[i].conf;
-            }
-        }
-        std::cout << "\n";
-
-        cv::imshow("PersonDetector Windows Test (ESC to quit)", frame);
-        if (cv::waitKey(1) == 27)  // ESC
-            break;
-
-        ++frameIdx;
-    }
-
-    std::cout << "\n===== 완료: 총 " << frameIdx << "프레임 처리 (크래시 없음) =====\n";
-
-    cap.release();
-    cv::destroyAllWindows();
-    return 0;
-}
-
-#else
-// ============================================================================
-// 실제 배포용 main() (RPi4/Linux 전용) - 원본 그대로.
-// ============================================================================
 #include <chrono>
 #include <thread>
 #include <deque>
+#include <iostream>
 
 #include <opencv2/opencv.hpp>
 
@@ -137,7 +61,7 @@ int main()
 
         // 모델 로드 실패해도 앱 전체를 죽이지 않음 - 주행/서보 제어는
         // 탐지 없이도 계속 동작해야 하므로 isLoaded()만 확인하고 넘어간다.
-        detection::PersonDetector personDetector("detection/models/person_detector_script_11_lite.pt", 320, 240, 0.25f, 0.3f);
+        detection::PersonDetector personDetector("detection/models/person_detector_script_11_lite.onnx", 320, 240, 0.25f, 0.3f);
         if (!personDetector.isLoaded())
         {
             std::cerr << "[경고] PersonDetector 모델 로드 실패 - 보행자 탐지 없이 계속 진행합니다.\n";
@@ -331,4 +255,3 @@ int main()
     }
     return 0;
 }
-#endif
