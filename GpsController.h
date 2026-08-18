@@ -11,6 +11,7 @@
 #include <mutex>
 #include <deque>
 #include <opencv2/opencv.hpp>
+#include <atomic>
 
 class SeoilCoordController;
 
