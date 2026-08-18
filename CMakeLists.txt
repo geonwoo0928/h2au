@@ -24,6 +24,8 @@ add_executable(my_app
     GpsController.cpp
     SeoilCoordController.cpp
     RcCarDataManager.cpp
+    ImuController.cpp
+
 )
 
 if(MSVC)
