@@ -24,6 +24,7 @@ add_executable(my_app
     GpsController.cpp
     SeoilCoordController.cpp
     RcCarDataManager.cpp
+    PersonDetector.cpp
 )
 
 if(MSVC)
