@@ -2,17 +2,24 @@
 #include "SeoilCoordController.h"
 #include "RcCarDataManager.h"
 
-GpsController::GpsController(const char* serialPort, RcCarDataManager& dataManager)
-    : dataManager_(dataManager) {
+GpsController::GpsController(const char *serialPort, RcCarDataManager &dataManager)
+    : dataManager_(dataManager)
+{
     uartFilestream_ = open(serialPort, O_RDONLY | O_NOCTTY);
-    if(uartFilestream_ < 0) {
+    if (uartFilestream_ < 0)
+    {
         throw std::runtime_error(std::string("Failed to open ") + serialPort);
     }
 
     tcflush(uartFilestream_, TCIFLUSH); // 기존에 커널 버퍼에 있던 데이터 비움
 
     struct termios options;
-    tcgetattr(uartFilestream_, &options);
+    if (tcgetattr(uartFilestream_, &options) < 0)
+    {
+        close(uartFilestream_);
+        uartFilestream_ = -1;
+        throw std::runtime_error("Failed to get GPS UART configuration");
+    }
 
     cfsetispeed(&options, B9600);
     cfsetospeed(&options, B9600);
@@ -31,56 +38,77 @@ GpsController::GpsController(const char* serialPort, RcCarDataManager& dataManag
 
     options.c_oflag &= ~OPOST; // 줄바꿈 문자 등을 시스템 임의로 변환하지 않고 원본 그대로 출력/처리
 
-    tcsetattr(uartFilestream_, TCSANOW, &options);
+    if (tcsetattr(uartFilestream_, TCSANOW, &options) < 0)
+    {
+        close(uartFilestream_);
+        uartFilestream_ = -1;
+        throw std::runtime_error("Failed to configure GPS UART");
+    }
 }
 
-GpsController::~GpsController() {
-    if(uartFilestream_ >= 0)
+GpsController::~GpsController()
+{
+    if (uartFilestream_ >= 0)
         close(uartFilestream_);
 }
 
-void GpsController::runGpsThread(const SeoilCoordController& coordController) {
-    while(isThreadRun_) {
+void GpsController::runGpsThread(const SeoilCoordController &coordController)
+{
+    while (isThreadRun_)
+    {
         double lat = 0.0;
         double lon = 0.0;
 
-        if(!getGpsData(lat, lon))
+        if (!getGpsData(lat, lon))
             continue;
 
         cv::Point2f pixel = coordController.getRcCarPixel(lat, lon);
         dataManager_.updateGps(lat, lon, pixel.x, pixel.y);
+
+        onGpsUpdated();
     }
 
     return;
 }
 
-void GpsController::stopThread() {isThreadRun_ = false;}
+void GpsController::stopThread() { isThreadRun_ = false; }
 
-bool GpsController::getGpsData(double& lat, double& lon) {
+bool GpsController::getGpsData(double &lat, double &lon)
+{
     char buffer[256];
 
-    while(true) {
+    while (isThreadRun_)
+    {
         size_t pos = rxBuffer_.find('\n');
 
-        if(pos == std::string::npos) {
-            int rx_length = read(uartFilestream_, (void*)buffer, sizeof(buffer) - 1);
+        if (pos == std::string::npos)
+        {
+            int rx_length = read(uartFilestream_, (void *)buffer, sizeof(buffer) - 1);
 
             if (rx_length <= 0)
                 return false;
 
+            if (rx_length < 0)
+            {
+                if (errno == EINTR)
+                    continue;
+
+                throw std::runtime_error("GPS UART read failed");
+            }
+
             rxBuffer_.append(buffer, rx_length);
-            
+
             continue;
         }
 
         std::string nmeaLine = rxBuffer_.substr(0, pos);
         rxBuffer_.erase(0, pos + 1);
-        
+
         if (!nmeaLine.empty() && nmeaLine.back() == '\r') // gps 센서는 데이터 마지막에 캐리지 리턴 포함해서 반환함
             nmeaLine.pop_back();
 
-        if (nmeaLine.rfind("$GPGGA", 0) != 0) 
-            continue; 
+        if (nmeaLine.rfind("$GPGGA", 0) != 0)
+            continue;
 
         if (parseGpsData(nmeaLine, lat, lon))
             return true;
@@ -89,21 +117,25 @@ bool GpsController::getGpsData(double& lat, double& lon) {
     return false;
 }
 
-bool GpsController::parseGpsData(const std::string& nmeaLine, double& lat, double& lon) {
+bool GpsController::parseGpsData(const std::string &nmeaLine, double &lat, double &lon)
+{
     std::stringstream stream(nmeaLine);
     std::string token;
     int index = 0;
     std::string lat_str;
     std::string lon_str;
 
-    while (std::getline(stream, token, ',')) {
-        if (index == 2) lat_str = token;
-        if (index == 4) lon_str = token;
+    while (std::getline(stream, token, ','))
+    {
+        if (index == 2)
+            lat_str = token;
+        if (index == 4)
+            lon_str = token;
         index++;
     }
 
     if (lat_str.empty() || lon_str.empty())
-    return false;
+        return false;
 
     if (convertToDegree(lat_str, lat) && convertToDegree(lon_str, lon))
         return true;
@@ -111,16 +143,20 @@ bool GpsController::parseGpsData(const std::string& nmeaLine, double& lat, doubl
     return false;
 }
 
-bool GpsController::convertToDegree(const std::string& degreeText, double& degrees) {
+bool GpsController::convertToDegree(const std::string &degreeText, double &degrees)
+{
     int divisor = 100;
-    try {
+    try
+    {
         double rawDegree = std::stod(degreeText);
         int convertedDegrees = static_cast<int>(rawDegree / divisor);
         double minutes = rawDegree - (convertedDegrees * divisor);
         degrees = convertedDegrees + (minutes / 60.0);
-        
+
         return true;
-    } catch (...) {
+    }
+    catch (...)
+    {
         return false;
     }
 }
