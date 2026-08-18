@@ -151,18 +151,6 @@ int main()
 
                 auto now = std::chrono::steady_clock::now();
 
-                if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastPrint).count() >= 500)
-                {
-                    std::cout
-                        << "[IMU] "
-                        << "Heading=" << imuData.heading
-                        << " Roll=" << imuData.roll
-                        << " Pitch=" << imuData.pitch
-                        << '\n';
-
-                    lastPrint = now;
-                }
-
                 int cvKey = cv::waitKey(1);
 
                 if (cvKey == 27)
