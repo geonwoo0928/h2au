@@ -61,6 +61,9 @@ void GpsController::runGpsThread(const SeoilCoordController &coordController, co
 
         if (!getGpsData(lat, lon))
             continue;
+        
+        if(!coordController.validateGpsData(static_cast<float>(lat), static_cast<float>(lon)))
+            continue;
 
         cv::Point2f pixel = coordController.getRcCarPixel(lat, lon);
         dataManager_.updateGps(lat, lon, pixel.x, pixel.y);

@@ -3,6 +3,8 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <deque>
+
 #include <opencv2/opencv.hpp>
 
 #include "Camera.h"
@@ -15,6 +17,8 @@
 #include "SeoilCoordController.h"
 #include "ServoController.h"
 #include "TerminalInput.h"
+#include "GpsController.h"
+#include "PersonDetector.h"
 
 struct ControlCommand
 {
@@ -57,6 +61,13 @@ int main()
         std::atomic<bool> running{true};
 
         ControlCommand command;
+        // 모델 로드 실패해도 앱 전체를 죽이지 않음 - 주행/서보 제어는
+        // 탐지 없이도 계속 동작해야 하므로 isLoaded()만 확인하고 넘어간다.
+        detection::PersonDetector personDetector("detection/models/person_detector_script_11_lite.onnx", 320, 240, 0.25f, 0.3f);
+        if (!personDetector.isLoaded())
+        {
+            std::cerr << "[경고] PersonDetector 모델 로드 실패 - 보행자 탐지 없이 계속 진행합니다.\n";
+        }
 
         auto path = dataManager.getRcCarPath();
         cv::Mat satelliteImg = coordController.drawPathOnSatelliteImg(path);
@@ -135,7 +146,14 @@ int main()
                     break;
                 }
 
-                cv::imshow("Robot Camera", frame);
+            // 탐지 결과를 화면에 박스로 그린다 (위성지도 투영은 카메라가 고정이
+            // 아니라 아직 캘리브레이션 방식이 정해지지 않아 보류 중).
+            if (personDetector.isLoaded())
+            {
+                personDetector.detect(frame, /*drawBoxes=*/true);
+            }
+
+            cv::imshow("Robot Camera", frame);
 
                 cv::Mat mapToShow;
 
