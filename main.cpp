@@ -96,23 +96,11 @@ int main()
                 break;
             }
 
-            // 최소 통합: 탐지 결과를 화면에 그리지 않고 콘솔에만 출력한다
-            // (위성지도 투영은 카메라가 고정이 아니라 아직 캘리브레이션 방식이
-            // 정해지지 않아 보류 중 - 여기서는 탐지 자체만 확인).
+            // 탐지 결과를 화면에 박스로 그린다 (위성지도 투영은 카메라가 고정이
+            // 아니라 아직 캘리브레이션 방식이 정해지지 않아 보류 중).
             if (personDetector.isLoaded())
             {
-                auto boxes = personDetector.detect(frame, /*drawBoxes=*/false);
-                if (!boxes.empty())
-                {
-                    auto feet = detection::PersonDetector::getFootPoints(boxes);
-                    std::cout << "[PersonDetector] " << boxes.size() << "명 검출";
-                    for (size_t i = 0; i < feet.size(); ++i)
-                    {
-                        std::cout << "  foot[" << i << "]=(" << feet[i].x << ", " << feet[i].y
-                            << ") conf=" << feet[i].conf;
-                    }
-                    std::cout << "\n";
-                }
+                personDetector.detect(frame, /*drawBoxes=*/true);
             }
 
             cv::imshow("Robot Camera", frame);
