@@ -46,6 +46,9 @@ void GpsController::runGpsThread(const SeoilCoordController& coordController) {
 
         if(!getGpsData(lat, lon))
             continue;
+        
+        if(!coordController.validateGpsData(static_cast<float>(lat), static_cast<float>(lon)))
+            continue;
 
         cv::Point2f pixel = coordController.getRcCarPixel(lat, lon);
         dataManager_.updateGps(lat, lon, pixel.x, pixel.y);
@@ -103,7 +106,7 @@ bool GpsController::parseGpsData(const std::string& nmeaLine, double& lat, doubl
     }
 
     if (lat_str.empty() || lon_str.empty())
-    return false;
+        return false;
 
     if (convertToDegree(lat_str, lat) && convertToDegree(lon_str, lon))
         return true;
