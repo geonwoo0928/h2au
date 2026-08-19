@@ -2,54 +2,58 @@
 #include "SeoilCoordController.h"
 #include "RcCarDataManager.h"
 
-GpsController::GpsController(const char *serialPort, RcCarDataManager &dataManager)
+#include <arpa/inet.h>
+#include <cerrno>
+#include <cstring>
+#include <sstream>
+#include <stdexcept>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+GpsController::GpsController(const char *serverIp, int port, RcCarDataManager &dataManager)
     : dataManager_(dataManager)
 {
-    uartFilestream_ = open(serialPort, O_RDONLY | O_NOCTTY);
-    if (uartFilestream_ < 0)
+    socketFd_ = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (socketFd_ < 0)
+        throw std::runtime_error("Failed to create GPS TCP socket");
+
+    sockaddr_in serverAddr{};
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(static_cast<uint16_t>(port));
+
+    if (inet_pton(AF_INET, serverIp, &serverAddr.sin_addr) != 1)
     {
-        throw std::runtime_error(std::string("Failed to open ") + serialPort);
+        close(socketFd_);
+        socketFd_ = -1;
+        throw std::runtime_error("Invalid GPS server IP address");
     }
 
-    tcflush(uartFilestream_, TCIFLUSH); // 기존에 커널 버퍼에 있던 데이터 비움
-
-    struct termios options;
-    if (tcgetattr(uartFilestream_, &options) < 0)
+    if (connect(socketFd_, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) < 0)
     {
-        close(uartFilestream_);
-        uartFilestream_ = -1;
-        throw std::runtime_error("Failed to get GPS UART configuration");
+        close(socketFd_);
+        socketFd_ = -1;
+        throw std::runtime_error(std::string("Failed to connect to iPhone GPS: ") + std::strerror(errno));
     }
 
-    cfsetispeed(&options, B9600);
-    cfsetospeed(&options, B9600);
+    // recv()가 무한정 blocking되지 않도록 100ms timeout
+    timeval timeout{};
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 100000;
 
-    options.c_cflag &= ~PARENB;        // 패리티 비트(Parity) 사용 안 함
-    options.c_cflag &= ~CSTOPB;        // 스톱 비트(Stop Bit) 2개 대신 1개 사용
-    options.c_cflag &= ~CSIZE;         // 데이터 비트 설정을 초기화(클리어)
-    options.c_cflag |= CS8;            // 데이터 비트를 8비트로 설정
-    options.c_cflag &= ~CRTSCTS;       // 하드웨어 흐름 제어(RTS/CTS Flow Control) 비활성화
-    options.c_cflag |= CREAD | CLOCAL; // 수신기(Receiver) 활성화 및 로컬 라인 제어 (모뎀 제어 신호 무시)
-
-    //    - ICANON 해제: 엔터(\n) 키를 누를 때까지 기다리지 않고, 들어오는 즉시 바이트 단위로 읽음
-    //    - ECHO / ECHOE 해제: 입력받은 문장을 터미널에 다시 화면 출력하는 기능 끄기 (수신만 하도록)
-    //    - ISIG 해제: Ctrl+C 같은 시그널 문자(인터럽트)를 무시하고 일반 데이터로 처리
-    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-
-    options.c_oflag &= ~OPOST; // 줄바꿈 문자 등을 시스템 임의로 변환하지 않고 원본 그대로 출력/처리
-
-    if (tcsetattr(uartFilestream_, TCSANOW, &options) < 0)
+    if (setsockopt(socketFd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
     {
-        close(uartFilestream_);
-        uartFilestream_ = -1;
-        throw std::runtime_error("Failed to configure GPS UART");
+        close(socketFd_);
+        socketFd_ = -1;
+        throw std::runtime_error("Failed to set GPS socket timeout");
     }
 }
 
 GpsController::~GpsController()
 {
-    if (uartFilestream_ >= 0)
-        close(uartFilestream_);
+    if (socketFd_ >= 0)
+        close(socketFd_);
 }
 
 void GpsController::runGpsThread(const SeoilCoordController &coordController, const std::function<void()> &onGpsUpdated)
@@ -61,20 +65,18 @@ void GpsController::runGpsThread(const SeoilCoordController &coordController, co
 
         if (!getGpsData(lat, lon))
             continue;
-        
-        if(!coordController.validateGpsData(static_cast<float>(lat), static_cast<float>(lon)))
-            continue;
 
         cv::Point2f pixel = coordController.getRcCarPixel(lat, lon);
         dataManager_.updateGps(lat, lon, pixel.x, pixel.y);
 
         onGpsUpdated();
     }
-
-    return;
 }
 
-void GpsController::stopThread() { isThreadRun_ = false; }
+void GpsController::stopThread()
+{
+    isThreadRun_ = false;
+}
 
 bool GpsController::getGpsData(double &lat, double &lon)
 {
@@ -86,31 +88,35 @@ bool GpsController::getGpsData(double &lat, double &lon)
 
         if (pos == std::string::npos)
         {
-            int rx_length = read(uartFilestream_, (void *)buffer, sizeof(buffer) - 1);
+            ssize_t rxLength = recv(socketFd_, buffer, sizeof(buffer) - 1, 0);
 
-            if (rx_length <= 0)
-                return false;
-
-            if (rx_length < 0)
+            if (rxLength > 0)
             {
-                if (errno == EINTR)
-                    continue;
-
-                throw std::runtime_error("GPS UART read failed");
+                rxBuffer_.append(buffer, static_cast<size_t>(rxLength));
+                continue;
             }
 
-            rxBuffer_.append(buffer, rx_length);
+            if (rxLength == 0)
+                throw std::runtime_error("iPhone GPS connection closed");
 
-            continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                return false;
+
+            if (errno == EINTR)
+                continue;
+
+            throw std::runtime_error(std::string("GPS TCP receive failed: ") + std::strerror(errno));
         }
 
         std::string nmeaLine = rxBuffer_.substr(0, pos);
         rxBuffer_.erase(0, pos + 1);
 
-        if (!nmeaLine.empty() && nmeaLine.back() == '\r') // gps 센서는 데이터 마지막에 캐리지 리턴 포함해서 반환함
+        if (!nmeaLine.empty() && nmeaLine.back() == '\r')
             nmeaLine.pop_back();
 
-        if (nmeaLine.rfind("$GPGGA", 0) != 0)
+        // GPS2IP에서 보내는 RMC 사용
+        // 일부 장치는 GPRMC 대신 GNRMC를 사용할 수 있어서 둘 다 허용
+        if (nmeaLine.rfind("$GPRMC", 0) != 0 && nmeaLine.rfind("$GNRMC", 0) != 0)
             continue;
 
         if (parseGpsData(nmeaLine, lat, lon))
@@ -124,36 +130,61 @@ bool GpsController::parseGpsData(const std::string &nmeaLine, double &lat, doubl
 {
     std::stringstream stream(nmeaLine);
     std::string token;
+
+    std::string status;
+    std::string latStr;
+    std::string latDirection;
+    std::string lonStr;
+    std::string lonDirection;
+
     int index = 0;
-    std::string lat_str;
-    std::string lon_str;
 
     while (std::getline(stream, token, ','))
     {
         if (index == 2)
-            lat_str = token;
-        if (index == 4)
-            lon_str = token;
+            status = token;
+        else if (index == 3)
+            latStr = token;
+        else if (index == 4)
+            latDirection = token;
+        else if (index == 5)
+            lonStr = token;
+        else if (index == 6)
+            lonDirection = token;
+
         index++;
     }
 
-    if (lat_str.empty() || lon_str.empty())
+    // RMC status:
+    // A = valid
+    // V = invalid
+    if (status != "A")
         return false;
 
-    if (convertToDegree(lat_str, lat) && convertToDegree(lon_str, lon))
-        return true;
+    if (latStr.empty() || lonStr.empty())
+        return false;
 
-    return false;
+    if (!convertToDegree(latStr, lat) || !convertToDegree(lonStr, lon))
+        return false;
+
+    if (latDirection == "S")
+        lat = -lat;
+
+    if (lonDirection == "W")
+        lon = -lon;
+
+    return true;
 }
 
 bool GpsController::convertToDegree(const std::string &degreeText, double &degrees)
 {
-    int divisor = 100;
     try
     {
         double rawDegree = std::stod(degreeText);
-        int convertedDegrees = static_cast<int>(rawDegree / divisor);
-        double minutes = rawDegree - (convertedDegrees * divisor);
+
+        int convertedDegrees = static_cast<int>(rawDegree / 100.0);
+        double minutes = rawDegree - (convertedDegrees * 100.0);
+
         degrees = convertedDegrees + (minutes / 60.0);
 
         return true;
