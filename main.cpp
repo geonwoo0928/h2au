@@ -69,7 +69,7 @@ int main()
 
         // ================= AI MODEL =================
 
-        detection::PersonDetector personDetector("detection/models/person_detector_script_11_lite.onnx", 320, 240, 0.25f, 0.3f);
+        detection::PersonDetector personDetector("../detection/models/person_detector_script_11_lite.onnx", 320, 240, 0.25f, 0.3f);
 
         if (!personDetector.isLoaded())
             std::cerr << "[WARNING] PersonDetector model load failed.\n";
@@ -151,8 +151,6 @@ int main()
             {
                 try
                 {
-                    std::cerr << "[AI] thread started\n";
-
                     while (running.load())
                     {
                         // 새로운 Camera frame이 없으면 잠깐 대기
@@ -161,8 +159,6 @@ int main()
                             std::this_thread::sleep_for(std::chrono::milliseconds(5));
                             continue;
                         }
-
-                        std::cerr << "[AI] new frame received\n";
 
                         cv::Mat inferenceFrame;
 
@@ -179,16 +175,12 @@ int main()
                             inferenceFrame = aiInputFrame.clone();
                         }
 
-                        std::cerr << "[AI] frame cloned\n";
-
                         // 모델이 정상적으로 로드되지 않았다면 추론하지 않음
                         if (!personDetector.isLoaded())
                         {
                             std::cerr << "[AI] model is not loaded\n";
                             continue;
                         }
-
-                        std::cerr << "[AI] detect start\n";
 
                         // =========================================
                         // AI 추론
@@ -216,17 +208,11 @@ int main()
                         // AI 결과 → Main Thread
                         // =========================================
 
-                        std::cerr << "[AI] output frame lock start\n";
-
                         {
                             std::lock_guard<std::mutex> lock(aiOutputMutex);
                             latestBoxes = boxes;
                         }
-
-                        std::cerr << "[AI] output frame updated\n";
                     }
-
-                    std::cerr << "[AI] thread loop ended\n";
                 }
                 catch (const std::exception &e)
                 {
