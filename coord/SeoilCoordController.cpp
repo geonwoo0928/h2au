@@ -26,15 +26,20 @@ cv::Mat SeoilCoordController::getSatImg()
             pixelPoints.push_back(cv::Point(cvRound(pos.pixelX), cvRound(pos.pixelY)));
         
         if (pixelPoints.size() >= 2)
-            cv::polylines(displayImg, pixelPoints, false, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+        {
+            cv::polylines(displayImg, pixelPoints, false, cv::Scalar(0, 0, 0), 5, cv::LINE_AA);
+            cv::polylines(displayImg, pixelPoints, false, cv::Scalar(0, 255, 255), 2, cv::LINE_AA);
+        }
         
-        cv::circle(displayImg, pixelPoints.back(), 6, cv::Scalar(0, 255, 0), -1);
+        cv::circle(displayImg, pixelPoints.back(), 10, cv::Scalar(255, 255, 255), -1, cv::LINE_AA); 
+        cv::circle(displayImg, pixelPoints.back(), 6, cv::Scalar(0, 255, 0), -1, cv::LINE_AA);
     }
 
     if (!currentPeople_.empty())
     {
         for (const cv::Point& p : currentPeople_)
-            cv::circle(displayImg, p, 8, cv::Scalar(0, 0, 255), -1);
+            cv::circle(displayImg, p, 12, cv::Scalar(255, 255, 255), -1, cv::LINE_AA); 
+            cv::circle(displayImg, p, 7, cv::Scalar(0, 0, 255), -1, cv::LINE_AA);
     }
 
     return displayImg;

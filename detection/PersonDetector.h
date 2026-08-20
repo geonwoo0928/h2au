@@ -15,7 +15,7 @@
 // 전처리(단순 stretch resize)와 디코딩(sigmoid/exp, decode_prediction 수식)은
 // LibTorch 시절과 완전히 동일하다 - torch::Tensor accessor 대신 순수 float*
 // 포인터 인덱싱으로 바뀐 것만 다르다.
-//
+
 // 디코드 수식은 train_person_detector.py::decode_prediction과 반드시 동일하게
 // 유지해야 한다 - 한쪽만 고치면 같은 모델인데 결과가 달라진다.
 namespace detection {
