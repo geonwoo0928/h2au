@@ -10,7 +10,8 @@
 #include "RcCarDataManager.h"
 #include "PersonLocationCalculator.h"
 
-class SeoilCoordController {
+class SeoilCoordController
+{
 public:
     SeoilCoordController();
 

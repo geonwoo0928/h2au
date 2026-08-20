@@ -8,10 +8,12 @@
 
 class SeoilCoordController;
 
-class PersonLocationCalculator {
+class PersonLocationCalculator
+{
 public:
     // 객체의 위도 경도 계산
     std::vector<cv::Point> calculate(std::vector<detection::FootPoint> footPoints, double rcLat, double rcLon, float imuHeading, const SeoilCoordController& controller);
+
 private:
     const float H_FOV = 53.0f;
     const float V_FOV = 41.0f;    
@@ -21,7 +23,8 @@ private:
     const int FRAME_HEIGHT_ = 480;
     std::vector<cv::Point> locations_;
 
-    struct ObjectMetric {
+    struct ObjectMetric
+    {
         float distance;
         float relAngleDeg;
     };

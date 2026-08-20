@@ -14,7 +14,6 @@ MotorController::MotorController(PwmController& pwm)
       motor2Direction_(24)
 {
     pwm_.configureMotorTimer();
-
     stop();
 }
 
@@ -29,56 +28,26 @@ MotorController::~MotorController()
     }
 }
 
-void MotorController::setReversed(
-    int motor,
-    bool reversed
-)
+void MotorController::setReversed(int motor, bool reversed)
 {
     if (motor == 1)
-    {
         motor1Reversed_ = reversed;
-    }
     else if (motor == 2)
-    {
         motor2Reversed_ = reversed;
-    }
     else
-    {
-        throw std::out_of_range(
-            "Motor number must be 1 or 2"
-        );
-    }
+        throw std::out_of_range("Motor number must be 1 or 2");
 }
 
-void MotorController::setSpeed(
-    int motor,
-    double speedPercent
-)
+void MotorController::setSpeed(int motor, double speedPercent)
 {
     if (motor != 1 && motor != 2)
-    {
-        throw std::out_of_range(
-            "Motor number must be 1 or 2"
-        );
-    }
+        throw std::out_of_range("Motor number must be 1 or 2");
 
-    speedPercent = std::clamp(
-        speedPercent,
-        -100.0,
-        100.0
-    );
+    speedPercent = std::clamp(speedPercent, -100.0, 100.0);
 
-    int pwmChannel = motor == 1 ? 13 : 12;
-
-    GpioOutput& direction =
-        motor == 1
-        ? motor1Direction_
-        : motor2Direction_;
-
-    bool reversed =
-        motor == 1
-        ? motor1Reversed_
-        : motor2Reversed_;
+    int pwmChannel = (motor == 1) ? 13 : 12;
+    GpioOutput& direction = (motor == 1) ? motor1Direction_ : motor2Direction_;
+    bool reversed = (motor == 1) ? motor1Reversed_ : motor2Reversed_;
 
     if (std::abs(speedPercent) < 0.001)
     {
@@ -87,22 +56,14 @@ void MotorController::setSpeed(
     }
 
     bool forward = speedPercent > 0.0;
-
     if (reversed)
         forward = !forward;
 
     pwm_.setDutyPercent(pwmChannel, 0.0);
-
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(10)
-    );
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     direction.set(forward);
-
-    pwm_.setDutyPercent(
-        pwmChannel,
-        std::abs(speedPercent)
-    );
+    pwm_.setDutyPercent(pwmChannel, std::abs(speedPercent));
 }
 
 void MotorController::drive(double speedPercent)

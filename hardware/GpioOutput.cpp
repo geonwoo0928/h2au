@@ -8,10 +8,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-GpioOutput::GpioOutput(
-    unsigned int offset,
-    const std::string& consumer
-)
+GpioOutput::GpioOutput(unsigned int offset, const std::string& consumer)
 {
     chipFd_ = open("/dev/gpiochip0", O_RDONLY | O_CLOEXEC);
 
@@ -24,12 +21,7 @@ GpioOutput::GpioOutput(
     request.num_lines = 1;
     request.config.flags = GPIO_V2_LINE_FLAG_OUTPUT;
 
-    strncpy(
-        request.consumer,
-        consumer.c_str(),
-        sizeof(request.consumer) - 1
-    );
-
+    strncpy(request.consumer, consumer.c_str(), sizeof(request.consumer) - 1);
     request.consumer[sizeof(request.consumer) - 1] = '\0';
 
     if (ioctl(chipFd_, GPIO_V2_GET_LINE_IOCTL, &request) < 0)
@@ -41,7 +33,6 @@ GpioOutput::GpioOutput(
     }
 
     lineFd_ = request.fd;
-
     set(false);
 }
 

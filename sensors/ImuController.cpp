@@ -45,8 +45,7 @@ void ImuController::initialize()
 
 int16_t ImuController::combineBytes(uint8_t low, uint8_t high)
 {
-    uint16_t value =
-        static_cast<uint16_t>(low) | (static_cast<uint16_t>(high) << 8);
+    uint16_t value = static_cast<uint16_t>(low) | (static_cast<uint16_t>(high) << 8);
 
     return static_cast<int16_t>(value);
 }

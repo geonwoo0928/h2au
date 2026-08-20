@@ -9,19 +9,13 @@
 TerminalInput::TerminalInput()
 {
     if (!isatty(STDIN_FILENO))
-        throw std::runtime_error(
-            "Keyboard input requires terminal"
-        );
+        throw std::runtime_error("Keyboard input requires terminal");
 
     if (tcgetattr(STDIN_FILENO, &original_) < 0)
         throw std::runtime_error("tcgetattr failed");
 
     termios raw = original_;
-
-    raw.c_lflag &= static_cast<tcflag_t>(
-        ~(ICANON | ECHO)
-    );
-
+    raw.c_lflag &= static_cast<tcflag_t>(~(ICANON | ECHO));
     raw.c_cc[VMIN] = 0;
     raw.c_cc[VTIME] = 0;
 
@@ -34,13 +28,7 @@ TerminalInput::TerminalInput()
 TerminalInput::~TerminalInput()
 {
     if (active_)
-    {
-        tcsetattr(
-            STDIN_FILENO,
-            TCSANOW,
-            &original_
-        );
-    }
+        tcsetattr(STDIN_FILENO, TCSANOW, &original_);
 }
 
 int TerminalInput::readKey(int timeoutMs)
@@ -50,11 +38,7 @@ int TerminalInput::readKey(int timeoutMs)
     descriptor.fd = STDIN_FILENO;
     descriptor.events = POLLIN;
 
-    int result = poll(
-        &descriptor,
-        1,
-        timeoutMs
-    );
+    int result = poll(&descriptor, 1, timeoutMs);
 
     if (result < 0)
     {
