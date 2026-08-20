@@ -19,6 +19,7 @@ LibTorch/
 *.tar.gz
 *.tgz
 *.7z
+*.idx
 
 .vscode/*
 !.vscode/settings.json

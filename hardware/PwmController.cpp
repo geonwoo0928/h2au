@@ -21,10 +21,7 @@ void PwmController::configureMotorTimer()
     setTimer(3, 847, 849);
 }
 
-void PwmController::setChannelValue(
-    int channel,
-    uint16_t value
-)
+void PwmController::setChannelValue(int channel, uint16_t value)
 {
     if (channel < 0 || channel > 19)
         throw std::out_of_range("PWM channel must be 0~19");
@@ -37,16 +34,10 @@ void PwmController::setChannelValue(
 
     value = std::min(value, period);
 
-    i2c_.writeRegister16(
-        static_cast<uint8_t>(0x20 + channel),
-        value
-    );
+    i2c_.writeRegister16(static_cast<uint8_t>(0x20 + channel), value);
 }
 
-void PwmController::setDutyPercent(
-    int channel,
-    double percent
-)
+void PwmController::setDutyPercent(int channel, double percent)
 {
     if (channel < 0 || channel > 19)
         throw std::out_of_range("PWM channel must be 0~19");
@@ -59,18 +50,12 @@ void PwmController::setDutyPercent(
     if (period == 0)
         throw std::runtime_error("PWM timer not configured");
 
-    uint16_t value = static_cast<uint16_t>(
-        std::round(period * percent / 100.0)
-    );
+    uint16_t value = static_cast<uint16_t>(std::round(period * percent / 100.0));
 
     setChannelValue(channel, value);
 }
 
-void PwmController::setTimer(
-    int timer,
-    uint16_t prescaler,
-    uint16_t period
-)
+void PwmController::setTimer(int timer, uint16_t prescaler, uint16_t period)
 {
     if (timer < 0 || timer > 6)
         throw std::out_of_range("Invalid PWM timer");
