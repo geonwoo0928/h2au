@@ -30,25 +30,30 @@ find_library(ONNXRUNTIME_LIB
 
 add_executable(my_app
     main.cpp
-    I2cDevice.cpp
-    PwmController.cpp
-    ServoController.cpp
-    MotorController.cpp
-    GpioOutput.cpp
-    TerminalInput.cpp
-    Camera.cpp
-    GpsController.cpp
-    SeoilCoordController.cpp
-    RcCarDataManager.cpp
-    ImuController.cpp
-    PersonDetector.cpp
-    PersonLocationCalculator.cpp
+    hardware/I2cDevice.cpp
+    hardware/PwmController.cpp
+    hardware/ServoController.cpp
+    hardware/MotorController.cpp
+    hardware/GpioOutput.cpp
+    sensors/GpsController.cpp
+    sensors/ImuController.cpp
+    coord/SeoilCoordController.cpp
+    coord/RcCarDataManager.cpp
+    coord/PersonLocationCalculator.cpp
+    detection/PersonDetector.cpp
+    utils/Camera.cpp
+    utils/TerminalInput.cpp
 )
 
 target_include_directories(my_app PRIVATE
     ${OpenCV_INCLUDE_DIRS}
     ${ONNXRUNTIME_ROOT}/include
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/hardware
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensors
+    ${CMAKE_CURRENT_SOURCE_DIR}/coord
+    ${CMAKE_CURRENT_SOURCE_DIR}/detection
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
 )
 
 target_link_libraries(my_app PRIVATE
