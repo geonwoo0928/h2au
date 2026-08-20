@@ -47,7 +47,7 @@ public:
 
     // frame 1장에서 사람을 탐지한다. 반환 좌표는 원본 frame 픽셀 좌표계.
     // drawBoxes가 true면 frame에 사각형+confidence 텍스트를 직접 그린다(in-place).
-    std::vector<DetectionBox> detect(cv::Mat& frame, bool drawBoxes = true);
+    std::vector<DetectionBox> detect(cv::Mat& frame);
 
     // 박스 목록 -> 발 위치 목록. x는 박스 중앙, y는 박스 하단(ymax).
     static std::vector<FootPoint> getFootPoints(const std::vector<DetectionBox>& boxes);
@@ -56,6 +56,8 @@ public:
     // 보호가 필요하면 이 뮤텍스를 쓰면 된다(내부 Run() 호출에도 이미 적용돼 있음).
     // 스레드마다 인스턴스를 따로 두면(권장) 이건 신경 쓸 필요 없음.
     std::mutex& inferenceMutex() { return modelMutex_; }
+
+    void drawBoxes(cv::Mat& frame, const std::vector<DetectionBox>& boxes);
 
 private:
     static float calculateIou(const DetectionBox& a, const DetectionBox& b);
