@@ -42,6 +42,7 @@ add_executable(my_app
     RcCarDataManager.cpp
     ImuController.cpp
     PersonDetector.cpp
+    PersonLocationCalculator.cpp
 )
 
 target_include_directories(my_app PRIVATE

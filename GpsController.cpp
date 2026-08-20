@@ -56,7 +56,7 @@ GpsController::~GpsController()
         close(socketFd_);
 }
 
-void GpsController::runGpsThread(const SeoilCoordController &coordController, const std::function<void()> &onGpsUpdated)
+void GpsController::runGpsThread(SeoilCoordController &coordController)
 {
     while (isThreadRun_)
     {
@@ -66,10 +66,9 @@ void GpsController::runGpsThread(const SeoilCoordController &coordController, co
         if (!getGpsData(lat, lon))
             continue;
 
-        cv::Point2f pixel = coordController.getRcCarPixel(lat, lon);
+        cv::Point2f pixel = coordController.getPixelFromLatLon(lat, lon);
         dataManager_.updateGps(lat, lon, pixel.x, pixel.y);
-
-        onGpsUpdated();
+        coordController.updatePath(dataManager_.getRcCarPath());
     }
 }
 

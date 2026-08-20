@@ -12,7 +12,36 @@ SeoilCoordController::SeoilCoordController() {
     }
 }
 
-cv::Point2f SeoilCoordController::getRcCarPixel(double lat, double lon) const {
+cv::Mat SeoilCoordController::getSatImg() {
+    std::lock_guard<std::mutex> lock(mapMutex_);
+
+    cv::Mat displayImg = satImg_.clone();
+
+    if(!currentPath_.empty()) {
+        std::vector<cv::Point> pixelPoints;
+        pixelPoints.reserve(currentPath_.size());
+        
+        for(const RcCarPosition& pos : currentPath_) { 
+            pixelPoints.push_back(cv::Point(cvRound(pos.pixelX), cvRound(pos.pixelY)));
+        }
+        
+        if(pixelPoints.size() >= 2) {
+            cv::polylines(displayImg, pixelPoints, false, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+        }
+        
+        cv::circle(displayImg, pixelPoints.back(), 6, cv::Scalar(0, 255, 0), -1);
+    }
+
+    if(!currentPeople_.empty()) {
+        for(const cv::Point& p : currentPeople_) {
+            cv::circle(displayImg, p, 6, cv::Scalar(0, 0, 255), -1);
+        }
+    }
+
+    return displayImg;
+}
+
+cv::Point2f SeoilCoordController::getPixelFromLatLon(double lat, double lon) const {
     std::vector<cv::Point2f> src = { cv::Point2f(static_cast<float>(lon), static_cast<float>(lat)) };
     std::vector<cv::Point2f> dst;
     cv::perspectiveTransform(src, dst, h_gps_to_pixel_);
@@ -20,24 +49,14 @@ cv::Point2f SeoilCoordController::getRcCarPixel(double lat, double lon) const {
     return dst[0];
 }
 
-cv::Mat SeoilCoordController::drawPathOnSatelliteImg(const std::deque<RcCarPosition>& path) {
-    cv::Mat sat_img = satImg_.clone();
+void SeoilCoordController::updatePath(const std::deque<RcCarPosition>& path) {
+    std::lock_guard<std::mutex> lock(mapMutex_);
+    currentPath_ = path;
+}
 
-    if(path.empty()) return sat_img;
-
-    std::vector<cv::Point> pixelPoints;
-    pixelPoints.reserve(path.size());
-
-    for(const RcCarPosition pos : path)
-        pixelPoints.push_back(cv::Point(static_cast<int>(pos.pixelX), static_cast<int>(pos.pixelY)));
-    
-    if(pixelPoints.size() >= 2) {
-        cv::polylines(sat_img, pixelPoints, false, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-    }
-
-    cv::circle(sat_img, pixelPoints.back(), 6, cv::Scalar(0, 255, 0), -1);
-
-    return sat_img;
+void SeoilCoordController::updatePeople(const std::vector<cv::Point>& location) {
+    std::lock_guard<std::mutex> lock(mapMutex_);
+    currentPeople_ = location;
 }
 
 bool SeoilCoordController::validateGpsData(float lat, float lon) const{
