@@ -1,7 +1,7 @@
 #include "SeoilCoordController.h"
 
 SeoilCoordController::SeoilCoordController() {
-    satImg_ = cv::imread("sat_img.png");
+    satImg_ = cv::imread("../sat_img.png");
     if (satImg_.empty()) {
         throw std::runtime_error("위성 지도 이미지를 불러오지 못했습니다.");
     }
@@ -26,7 +26,7 @@ cv::Mat SeoilCoordController::getSatImg() {
         }
         
         if(pixelPoints.size() >= 2) {
-            cv::polylines(displayImg, pixelPoints, false, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+            cv::polylines(displayImg, pixelPoints, false, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
         }
         
         cv::circle(displayImg, pixelPoints.back(), 6, cv::Scalar(0, 255, 0), -1);
@@ -34,7 +34,7 @@ cv::Mat SeoilCoordController::getSatImg() {
 
     if(!currentPeople_.empty()) {
         for(const cv::Point& p : currentPeople_) {
-            cv::circle(displayImg, p, 6, cv::Scalar(0, 0, 255), -1);
+            cv::circle(displayImg, p, 8, cv::Scalar(0, 0, 255), -1);
         }
     }
 

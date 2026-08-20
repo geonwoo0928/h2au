@@ -202,7 +202,7 @@ int main()
                         // =========================================
 
                         std::vector<detection::DetectionBox> boxes =
-                            personDetector.detect(inferenceFrame, /*drawBoxes=*/false);
+                            personDetector.detect(inferenceFrame);
 
                         // =========================================
                         // 탐지 결과
@@ -310,21 +310,7 @@ int main()
                 }
 
                 cv::Mat displayFrame = frame.clone();
-                for (const auto &box : boxesToDraw)
-                {
-                    cv::rectangle(
-                        displayFrame,
-                        cv::Point(static_cast<int>(box.xmin), static_cast<int>(box.ymin)),
-                        cv::Point(static_cast<int>(box.xmax), static_cast<int>(box.ymax)),
-                        cv::Scalar(0, 255, 0), 2);
-
-                    std::string confStr = cv::format("%.2f", box.conf);
-                    cv::putText(
-                        displayFrame, confStr,
-                        cv::Point(static_cast<int>(box.xmin),
-                                  std::max(20, static_cast<int>(box.ymin) - 10)),
-                        cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 255, 0), 2);
-                }
+                personDetector.drawBoxes(displayFrame, boxesToDraw);
 
                 cv::imshow("Robot Camera", displayFrame);
 

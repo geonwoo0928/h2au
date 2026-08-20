@@ -180,7 +180,7 @@ std::vector<DetectionBox> PersonDetector::decodeOutputs(
     return boxes;
 }
 
-std::vector<DetectionBox> PersonDetector::detect(cv::Mat& frame, bool drawBoxes) {
+std::vector<DetectionBox> PersonDetector::detect(cv::Mat& frame) {
     if (!loaded_ || frame.empty()) {
         return {};
     }
@@ -254,19 +254,27 @@ std::vector<DetectionBox> PersonDetector::detect(cv::Mat& frame, bool drawBoxes)
         float ymax = std::max(0.0f, std::min(box.ymax * sy, static_cast<float>(origH)));
 
         result.push_back({ xmin, ymin, xmax, ymax, box.conf });
-
-        if (drawBoxes) {
-            cv::rectangle(frame, cv::Point(static_cast<int>(xmin), static_cast<int>(ymin)),
-                cv::Point(static_cast<int>(xmax), static_cast<int>(ymax)),
-                cv::Scalar(0, 255, 0), 3);
-            std::string confStr = cv::format("%.2f", box.conf);
-            cv::putText(frame, confStr,
-                cv::Point(static_cast<int>(xmin), std::max(20, static_cast<int>(ymin) - 10)),
-                cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 0), 2);
-        }
     }
 
     return result;
+}
+
+void PersonDetector::drawBoxes(cv::Mat& frame, const std::vector<DetectionBox>& boxes) {
+    for(const DetectionBox& box : boxes)
+    {
+        cv::rectangle(
+            frame,
+            cv::Point(static_cast<int>(box.xmin), static_cast<int>(box.ymin)),
+            cv::Point(static_cast<int>(box.xmax), static_cast<int>(box.ymax)),
+            cv::Scalar(0, 255, 0), 2);
+
+        std::string confStr = cv::format("%.2f", box.conf);
+        cv::putText(
+            frame, confStr,
+            cv::Point(static_cast<int>(box.xmin),
+                        std::max(20, static_cast<int>(box.ymin) - 10)),
+            cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 255, 0), 2);
+    }
 }
 
 std::vector<FootPoint> PersonDetector::getFootPoints(const std::vector<DetectionBox>& boxes) {
