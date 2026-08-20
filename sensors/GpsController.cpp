@@ -1,6 +1,6 @@
 #include "GpsController.h"
-#include "SeoilCoordController.h"
 #include "RcCarDataManager.h"
+#include "SeoilCoordController.h"
 
 #include <arpa/inet.h>
 #include <cerrno>
@@ -38,9 +38,7 @@ GpsController::GpsController(const char *serverIp, int port, RcCarDataManager &d
     }
 
     // recv()가 무한정 blocking되지 않도록 100ms timeout
-    timeval timeout{};
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 100000;
+    timeval timeout{0, 100000};
 
     if (setsockopt(socketFd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
     {
@@ -132,9 +130,7 @@ bool GpsController::parseGpsData(const std::string &nmeaLine, double &lat, doubl
 
     std::string status;
     std::string latStr;
-    std::string latDirection;
     std::string lonStr;
-    std::string lonDirection;
 
     int index = 0;
 
@@ -144,12 +140,8 @@ bool GpsController::parseGpsData(const std::string &nmeaLine, double &lat, doubl
             status = token;
         else if (index == 3)
             latStr = token;
-        else if (index == 4)
-            latDirection = token;
         else if (index == 5)
             lonStr = token;
-        else if (index == 6)
-            lonDirection = token;
 
         index++;
     }
@@ -165,12 +157,6 @@ bool GpsController::parseGpsData(const std::string &nmeaLine, double &lat, doubl
 
     if (!convertToDegree(latStr, lat) || !convertToDegree(lonStr, lon))
         return false;
-
-    if (latDirection == "S")
-        lat = -lat;
-
-    if (lonDirection == "W")
-        lon = -lon;
 
     return true;
 }

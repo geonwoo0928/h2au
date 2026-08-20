@@ -3,7 +3,8 @@
 #include <deque>
 #include <mutex>
 
-struct RcCarPosition {
+struct RcCarPosition
+{
     double lat = 0.0;
     double lon = 0.0;
     double yaw = 0.0;
@@ -11,7 +12,8 @@ struct RcCarPosition {
     float pixelY = 0.0f;
 };
 
-class RcCarDataManager {
+class RcCarDataManager
+{
 public:
     // 위경도, 픽셀 좌표를 currentPos_에 대입 및 rcCarPath_에 추가하는 함수
     void updateGps(double lat, double lon, float pixelX, float pixelY);
@@ -24,6 +26,7 @@ public:
 
     // 현재 RC카 위치 정보를 반환하는 함수
     RcCarPosition getCurrentPos();
+
 private:
     std::mutex mutex_;
     RcCarPosition currentPos_;

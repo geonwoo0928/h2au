@@ -69,13 +69,10 @@ int main()
 
         // ================= AI MODEL =================
 
-        detection::PersonDetector personDetector(
-            "detection/models/person_detector_script_11_lite.onnx", 320, 240, 0.25f, 0.3f);
+        detection::PersonDetector personDetector("detection/models/person_detector_script_11_lite.onnx", 320, 240, 0.25f, 0.3f);
 
         if (!personDetector.isLoaded())
-        {
             std::cerr << "[WARNING] PersonDetector model load failed.\n";
-        }
 
         // ================= PROGRAM STATE =================
 
@@ -116,14 +113,10 @@ int main()
         auto joinThreads = [&]()
         {
             if (gpsThread.joinable())
-            {
                 gpsThread.join();
-            }
 
             if (aiThread.joinable())
-            {
                 aiThread.join();
-            }
         };
 
         try
@@ -201,8 +194,7 @@ int main()
                         // AI 추론
                         // =========================================
 
-                        std::vector<detection::DetectionBox> boxes =
-                            personDetector.detect(inferenceFrame);
+                        std::vector<detection::DetectionBox> boxes = personDetector.detect(inferenceFrame);
 
                         // =========================================
                         // 탐지 결과
@@ -210,13 +202,9 @@ int main()
 
                         if (!boxes.empty())
                         {
-                            std::vector<detection::FootPoint> footPoints =
-                                personDetector.getFootPoints(boxes);
+                            std::vector<detection::FootPoint> footPoints = personDetector.getFootPoints(boxes);
                             RcCarPosition currentPos = dataManager.getCurrentPos();
-                            std::vector<cv::Point> peopleLocation =
-                                personLocationCalculator.calculate(
-                                    footPoints, currentPos.lat, currentPos.lon,
-                                    currentPos.yaw, coordController);
+                            std::vector<cv::Point> peopleLocation = personLocationCalculator.calculate(footPoints, currentPos.lat, currentPos.lon, currentPos.yaw, coordController);
                             coordController.updatePeople(peopleLocation);
                         }
                         else
@@ -318,9 +306,7 @@ int main()
                 satelliteImg = coordController.getSatImg();
 
                 if (!satelliteImg.empty())
-                {
                     cv::imshow("Satellite Map", satelliteImg);
-                }
 
                 // ================= OpenCV KEY =================
 
@@ -367,9 +353,7 @@ int main()
                 case 'A':
                     command.steeringAngle -= 5.0;
                     if (command.steeringAngle < -30.0)
-                    {
                         command.steeringAngle = -30.0;
-                    }
 
                     servo.setAngle(2, command.steeringAngle);
                     break;
@@ -378,9 +362,7 @@ int main()
                 case 'D':
                     command.steeringAngle += 5.0;
                     if (command.steeringAngle > 30.0)
-                    {
                         command.steeringAngle = 30.0;
-                    }
                     servo.setAngle(2, command.steeringAngle);
                     break;
 
@@ -389,9 +371,7 @@ int main()
                 case 'I':
                     command.cameraTilt += 5.0;
                     if (command.cameraTilt > 45.0)
-                    {
                         command.cameraTilt = 45.0;
-                    }
 
                     servo.setAngle(1, command.cameraTilt);
                     break;
@@ -400,9 +380,7 @@ int main()
                 case 'K':
                     command.cameraTilt -= 5.0;
                     if (command.cameraTilt < -45.0)
-                    {
                         command.cameraTilt = -45.0;
-                    }
 
                     servo.setAngle(1, command.cameraTilt);
                     break;
@@ -413,9 +391,7 @@ int main()
                 case 'J':
                     command.cameraPan -= 5.0;
                     if (command.cameraPan < -90.0)
-                    {
                         command.cameraPan = -90.0;
-                    }
 
                     servo.setAngle(0, command.cameraPan);
                     break;
@@ -424,9 +400,7 @@ int main()
                 case 'L':
                     command.cameraPan += 5.0;
                     if (command.cameraPan > 90.0)
-                    {
                         command.cameraPan = 90.0;
-                    }
                     servo.setAngle(0, command.cameraPan);
                     break;
 
