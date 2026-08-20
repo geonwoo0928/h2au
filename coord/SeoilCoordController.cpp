@@ -38,8 +38,10 @@ cv::Mat SeoilCoordController::getSatImg()
     if (!currentPeople_.empty())
     {
         for (const cv::Point& p : currentPeople_)
+        {
             cv::circle(displayImg, p, 12, cv::Scalar(255, 255, 255), -1, cv::LINE_AA); 
             cv::circle(displayImg, p, 7, cv::Scalar(0, 0, 255), -1, cv::LINE_AA);
+        }
     }
 
     return displayImg;
