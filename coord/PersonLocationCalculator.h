@@ -17,8 +17,8 @@ public:
 private:
     const float H_FOV = 53.0f;
     const float V_FOV = 41.0f;    
-    const float CAMERA_HEIGHT = 0.1f;
-    const float TILT_ANGLE = 15.0f;
+    const float CAMERA_HEIGHT = 0.06f;
+    const float TILT_ANGLE = 2.0f;
     const int FRAME_WIDTH_ = 640;
     const int FRAME_HEIGHT_ = 480;
     std::vector<cv::Point> locations_;

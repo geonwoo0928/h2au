@@ -69,7 +69,7 @@ int main()
 
         // ================= AI MODEL =================
 
-        detection::PersonDetector personDetector("../detection/models/person_detector_script_11_lite.onnx", 320, 240, 0.25f, 0.3f);
+        detection::PersonDetector personDetector("../detection/models/person_detector_script_10_stride16.onnx", 320, 240, 0.25f, 0.3f);
 
         if (!personDetector.isLoaded())
             std::cerr << "[WARNING] PersonDetector model load failed.\n";

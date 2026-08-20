@@ -17,7 +17,11 @@ PersonLocationCalculator::ObjectMetric PersonLocationCalculator::calculateObject
         return {-1.0f, rel_angle_deg};
     
     float total_v_angle_rad = total_v_angle_deg * M_PI / 180.0f; // 라디안으로 변환
-    float distance = CAMERA_HEIGHT / std::tan(total_v_angle_rad); // 삼각비 tan(total_v_angle_rad) 는 (rc카로부터 객체의 거리) / (카메라 높이) 랑 똑같음
+    // float distance = CAMERA_HEIGHT / std::tan(total_v_angle_rad); // 삼각비 tan(total_v_angle_rad) 는 (rc카로부터 객체의 거리) / (카메라 높이) 랑 똑같음
+    float real_distance = CAMERA_HEIGHT / std::tan(total_v_angle_rad);
+
+    float VISUAL_WEIGHT = 8.0f;
+    float distance = real_distance * VISUAL_WEIGHT;
     
     return {distance, rel_angle_deg};
 }
